@@ -64,9 +64,10 @@ if(isset($_REQUEST['submit1'])){
 if (isset($_REQUEST['submit2'])) {
     $hay_post = true;
 
-    $nombre = isset($_REQUEST['txtNombre']) ? $_REQUEST['txtNombre'] : "";
-    $tipoDeGasto = isset($_REQUEST['cmbTipoGasto']) ? $_REQUEST['cmbTipoGasto'] : "";
-    $valorDelGasto = isset($_REQUEST['txtValorGasto']) ? $_REQUEST['txtValorGasto'] : "";
+    $nombre = $_REQUEST['txtNombre'] ?? "";
+    $tipoDeGasto = $_REQUEST['cmbTipoGasto'] ?? "";
+    $valorDelGasto = $_REQUEST['txtValorGasto'] ?? "";
+    $idPersona = $_REQUEST['idPersona'] ?? null;
 
     // Validaciones
     if (!empty($nombre)) {
@@ -75,29 +76,30 @@ if (isset($_REQUEST['submit2'])) {
         $error .= "El nombre no puede estar vacío.<br>";
     }
 
-    if ($tipoDeGasto == "") {
+    if (empty($tipoDeGasto)) {
         $error .= "Seleccione un tipo de Gasto.<br>";
     }
 
-    if ($valorDelGasto <= 0 || !is_numeric($valorDelGasto)) {
+    if (!is_numeric($valorDelGasto) || $valorDelGasto <= 0) {
         $error .= "El valor tiene que ser mayor a 0 y numérico.<br>";
     }
 
-    if (!$error && $idPersona !== null) {
+    if (!$error && !empty($idPersona)) {
         $stm_modificar = $conexion->prepare("UPDATE gastos SET nombre = :nombre, tipoGasto = :tipoGasto, valorGasto = :valorGasto WHERE codigoGasto = :id");
         $stm_modificar->execute([
             ':nombre' => $nombre,
-            ':tipoGastos' => $tipoDeGasto,
-            ':valorGastos' => $valorDelGasto,
+            ':tipoGasto' => $tipoDeGasto,
+            ':valorGasto' => $valorDelGasto,
             ':id' => $idPersona
         ]);
 
         header("Location: index.php?mensaje=registroModificado");
         exit();
-    } elseif ($idPersona === null) {
+    } elseif (empty($idPersona)) {
         $error .= "Error interno: No se puede modificar porque no se identificó el registro.<br>";
     }
 }
+
 
 
 if(isset($_REQUEST['id']) && isset($_REQUEST['op'])){
