@@ -10,7 +10,7 @@ $hay_post = "";
 $idPersona = null;
 
 // Calcular el total de los valores de los gastos
-$stm_totalGastos = $conexion->prepare("SELECT SUM(valorGastos) as total FROM gastos");
+$stm_totalGastos = $conexion->prepare("SELECT SUM(valorGasto) as total FROM gastos");
 
 $stm_totalGastos->execute();
 $resultadoTotal = $stm_totalGastos->fetch();
@@ -53,8 +53,8 @@ if(isset($_REQUEST['submit1'])){
     }
 
     if(!$error){
-        $stm_insertarRegistro = $conexion->prepare("insert into gastos(nombre, tipoGastos, valorGastos) values(:nombre, :tipoGastos, :valorGastos)");
-        $stm_insertarRegistro->execute([':nombre'=>$nombre, ':tipoGastos'=>$tipoDeGasto, ':valorGastos'=>$valorDelGasto]);
+        $stm_insertarRegistro = $conexion->prepare("insert into gastos(nombre, tipoGasto, valorGasto) values(:nombre, :tipoGasto, :valorGasto)");
+        $stm_insertarRegistro->execute([':nombre'=>$nombre, ':tipoGasto'=>$tipoDeGasto, ':valorGasto'=>$valorDelGasto]);
         header("Location: index.php?mensaje=registroGuardado");
         exit();
     }
@@ -84,7 +84,7 @@ if (isset($_REQUEST['submit2'])) {
     }
 
     if (!$error && $idPersona !== null) {
-        $stm_modificar = $conexion->prepare("UPDATE gastos SET nombre = :nombre, tipoGastos = :tipoGastos, valorGastos = :valorGastos WHERE codigoGastos = :id");
+        $stm_modificar = $conexion->prepare("UPDATE gastos SET nombre = :nombre, tipoGasto = :tipoGasto, valorGasto = :valorGasto WHERE codigoGasto = :id");
         $stm_modificar->execute([
             ':nombre' => $nombre,
             ':tipoGastos' => $tipoDeGasto,
@@ -105,13 +105,13 @@ if(isset($_REQUEST['id']) && isset($_REQUEST['op'])){
     $op = $_REQUEST['op'];
 
     if($op == 'm'){
-        $stm_seleccionarRegistro = $conexion->prepare("select * from gastos where codigoGastos=:id");
+        $stm_seleccionarRegistro = $conexion->prepare("select * from gastos where codigoGasto=:id");
         $stm_seleccionarRegistro->execute([':id'=>$id]);
         $resultado = $stm_seleccionarRegistro->fetch();
-        $idPersona = $resultado['codigoGastos'];
+        $idPersona = $resultado['codigoGasto'];
         $nombre = $resultado['nombre'];
-        $tipoDeGasto = $resultado['tipoGastos'];
-        $valorDelGasto = $resultado['valorGastos'];
+        $tipoDeGasto = $resultado['tipoGasto'];
+        $valorDelGasto = $resultado['valorGasto'];
     }
     else if($op == 'e'){
         $stm_eliminar = $conexion->prepare("delete from gastos where codigoGastos= :id");
@@ -171,18 +171,16 @@ if(isset($_REQUEST['id']) && isset($_REQUEST['op'])){
                 }
             ?>
             <a class="btn btn-secondary" href="index.php">Cancelar</a>
+        
+        </form>
 
-
-            
-                    <!-- Formulario de búsqueda -->
-                <form action="<?php echo $_SERVER['PHP_SELF']; ?>" method="get" class="mb-3">
+        
+         <!-- Formulario de búsqueda -->
+                    <form action="<?php echo $_SERVER['PHP_SELF']; ?>" method="get" class="mb-3">
                     <label for="search" class="form-label">Buscar por Nombre:</label>
                     <input type="text" name="search" id="search" class="form-control" value="<?php echo isset($_REQUEST['search']) ? $_REQUEST['search'] : ''; ?>">
                     <button type="submit" class="btn btn-secondary mt-2">Buscar</button>
-                </form>
-
-        
-        </form>
+                    </form>
         <br>
         <?php if($error):  ?>
             <div class="alert alert-danger alert-dismissible fade show" role="alert">
@@ -224,10 +222,10 @@ if(isset($_REQUEST['id']) && isset($_REQUEST['op'])){
                 <?php foreach($resultados as $registro): ?>
                     <tr>
                         <td><?php echo $registro['nombre']; ?></td>
-                        <td><?php echo $registro['tipoGastos']; ?></td>
-                        <td><?php echo $registro['valorGastos']; ?></td>
-                        <td><a class="btn btn-primary" href="index.php?id=<?php echo $registro['codigoGastos'] ?>&op=m">Modificar</a></td>
-                        <td><a class="btn btn-danger" href="index.php?id=<?php echo $registro['codigoGastos'] ?>&op=e" onclick="return confirm('Desea eliminar el registro');">Eliminar</a></td>
+                        <td><?php echo $registro['tipoGasto']; ?></td>
+                        <td><?php echo $registro['valorGasto']; ?></td>
+                        <td><a class="btn btn-primary" href="index.php?id=<?php echo $registro['codigoGasto'] ?>&op=m">Modificar</a></td>
+                        <td><a class="btn btn-danger" href="index.php?id=<?php echo $registro['codigoGasto'] ?>&op=e" onclick="return confirm('Desea eliminar el registro');">Eliminar</a></td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>
