@@ -10,20 +10,21 @@ $hay_post = "";
 $idPersona = null;
 
 // Calcular el total de los valores de los gastos
-$stm_totalGastos = $cadena_conexion->prepare("SELECT SUM(valorGasto) as total FROM gastos");
+$stm_totalGastos = $conexion->prepare("SELECT SUM(valorGastos) as total FROM gastos");
+
 $stm_totalGastos->execute();
 $resultadoTotal = $stm_totalGastos->fetch();
-$totalGastos = $resultadoTotal['total'] ? $resultadoTotal['total'] : 0;
+$totalGastos = $resultadoTotal['total'] ?? 0;
 
 // Filtrar por nombre si se ha enviado un valor de búsqueda
 $searchQuery = "";
-if (isset($_REQUEST['search']) && !empty($_REQUEST['search'])) {
+if (!empty($_REQUEST['search'])) {
     $searchQuery = "%" . $_REQUEST['search'] . "%";
-    $stm = $cadena_conexion->prepare("SELECT * FROM gastos WHERE nombre LIKE :search");
+    $stm = $conexion->prepare("SELECT * FROM gastos WHERE nombre LIKE :search");
     $stm->execute([':search' => $searchQuery]);
 } else {
-    // Si no hay búsqueda, mostrar todos los registros
-    $stm = $cadena_conexion->prepare("SELECT * FROM persona");
+    // Mostrar todos los registros si no hay búsqueda
+    $stm = $conexion->prepare("SELECT * FROM gastos");
     $stm->execute();
 }
 
@@ -52,60 +53,68 @@ if(isset($_REQUEST['submit1'])){
     }
 
     if(!$error){
-        $stm_insertarRegistro = $cadena_conexion->prepare("insert into gastos(nombre, tipoGasto, valorGasto) values(:nombre, :tipoGasto, :valorGasto)");
-        $stm_insertarRegistro->execute([':nombre'=>$nombre, ':tipoGasto'=>$tipoDeGasto, ':valorGasto'=>$valorDelGasto]);
+        $stm_insertarRegistro = $conexion->prepare("insert into gastos(nombre, tipoGastos, valorGastos) values(:nombre, :tipoGastos, :valorGastos)");
+        $stm_insertarRegistro->execute([':nombre'=>$nombre, ':tipoGastos'=>$tipoDeGasto, ':valorGastos'=>$valorDelGasto]);
         header("Location: index.php?mensaje=registroGuardado");
         exit();
     }
 }
 
 // Opción de modificar registros
-if(isset($_REQUEST['submit2'])){
-    $codigoUsuario = $_REQUEST['id'];
+if (isset($_REQUEST['submit2'])) {
     $hay_post = true;
+
     $nombre = isset($_REQUEST['txtNombre']) ? $_REQUEST['txtNombre'] : "";
     $tipoDeGasto = isset($_REQUEST['cmbTipoGasto']) ? $_REQUEST['cmbTipoGasto'] : "";
     $valorDelGasto = isset($_REQUEST['txtValorGasto']) ? $_REQUEST['txtValorGasto'] : "";
 
-    // Condicionales de verificación para el nombre
-    if(!empty($nombre)){
-        $nombre = preg_replace("/[^a-zA-ZáéíóúÁÉÍÓÚ]/u","",$nombre);
-    }
-    else{
+    // Validaciones
+    if (!empty($nombre)) {
+        $nombre = preg_replace("/[^a-zA-ZáéíóúÁÉÍÓÚ\s]/u", "", $nombre);
+    } else {
         $error .= "El nombre no puede estar vacío.<br>";
     }
 
-    if($tipoDeGasto == ""){
+    if ($tipoDeGasto == "") {
         $error .= "Seleccione un tipo de Gasto.<br>";
     }
 
-    if($valorDelGasto <= 0){
-        $error .= "El valor tiene que ser mayor a 0.<br>";
+    if ($valorDelGasto <= 0 || !is_numeric($valorDelGasto)) {
+        $error .= "El valor tiene que ser mayor a 0 y numérico.<br>";
     }
 
-    if(!$error){
-        $stm_modificar = $conexion->prepare("update persona set nombre = :nombre, tipoGasto = :tipoGasto, valorGasto = :valorGasto where idPersona = :id");
-        $stm_modificar->execute([':nombre'=>$nombre, ':tipoGasto'=>$tipoDeGasto, ':valorGasto'=>$valorDelGasto, ':id'=> $idPersona]);
+    if (!$error && $idPersona !== null) {
+        $stm_modificar = $conexion->prepare("UPDATE gastos SET nombre = :nombre, tipoGastos = :tipoGastos, valorGastos = :valorGastos WHERE codigoGastos = :id");
+        $stm_modificar->execute([
+            ':nombre' => $nombre,
+            ':tipoGastos' => $tipoDeGasto,
+            ':valorGastos' => $valorDelGasto,
+            ':id' => $idPersona
+        ]);
+
         header("Location: index.php?mensaje=registroModificado");
         exit();
+    } elseif ($idPersona === null) {
+        $error .= "Error interno: No se puede modificar porque no se identificó el registro.<br>";
     }
 }
+
 
 if(isset($_REQUEST['id']) && isset($_REQUEST['op'])){
     $id = $_REQUEST['id'];
     $op = $_REQUEST['op'];
 
     if($op == 'm'){
-        $stm_seleccionarRegistro = $cadena_conexion->prepare("select * from gastos where id_persona=:id");
+        $stm_seleccionarRegistro = $conexion->prepare("select * from gastos where codigoGastos=:id");
         $stm_seleccionarRegistro->execute([':id'=>$id]);
         $resultado = $stm_seleccionarRegistro->fetch();
-        $idPersona = $resultado['id_persona'];
+        $idPersona = $resultado['codigoGastos'];
         $nombre = $resultado['nombre'];
-        $tipoDeGasto = $resultado['tipoGasto'];
-        $valorDelGasto = $resultado['valorGasto'];
+        $tipoDeGasto = $resultado['tipoGastos'];
+        $valorDelGasto = $resultado['valorGastos'];
     }
     else if($op == 'e'){
-        $stm_eliminar = $cadena_conexion->prepare("delete from persona where id_persona = :id");
+        $stm_eliminar = $conexion->prepare("delete from gastos where codigoGastos= :id");
         $stm_eliminar->execute([':id'=>$id]);
         header("Location: index.php?mensaje=registroEliminado");
         exit();
@@ -124,15 +133,10 @@ if(isset($_REQUEST['id']) && isset($_REQUEST['op'])){
 </head>
 <body>
 
-    <h1>FORMULARIO GASTOS FAMILIARES</h1>
+<h1 class="text-center">FORMULARIO GASTOS FAMILIARES</h1>
 
     <div class="container">
-        <!-- Formulario de búsqueda -->
-        <form action="<?php echo $_SERVER['PHP_SELF']; ?>" method="get" class="mb-3">
-            <label for="search" class="form-label">Buscar por Nombre:</label>
-            <input type="text" name="search" id="search" class="form-control" value="<?php echo isset($_REQUEST['search']) ? $_REQUEST['search'] : ''; ?>">
-            <button type="submit" class="btn btn-secondary mt-2">Buscar</button>
-        </form>
+       
 
         <!-- Recuadro para mostrar el total de los gastos -->
         <div class="alert alert-info" role="alert">
@@ -157,6 +161,9 @@ if(isset($_REQUEST['id']) && isset($_REQUEST['op'])){
             <label class="form-label" for="valorGasto">Valor del Gasto</label>
             <input class="form-control" type="text" name="txtValorGasto" id="ValorGasto" value="<?php echo isset($valorDelGasto)? $valorDelGasto : 0 ?>"><br>
 
+
+
+            
             <input class="btn btn-primary" type="submit" value="Enviar" name="submit1">
             <?php
                 if($idPersona){
@@ -164,6 +171,17 @@ if(isset($_REQUEST['id']) && isset($_REQUEST['op'])){
                 }
             ?>
             <a class="btn btn-secondary" href="index.php">Cancelar</a>
+
+
+            
+                    <!-- Formulario de búsqueda -->
+                <form action="<?php echo $_SERVER['PHP_SELF']; ?>" method="get" class="mb-3">
+                    <label for="search" class="form-label">Buscar por Nombre:</label>
+                    <input type="text" name="search" id="search" class="form-control" value="<?php echo isset($_REQUEST['search']) ? $_REQUEST['search'] : ''; ?>">
+                    <button type="submit" class="btn btn-secondary mt-2">Buscar</button>
+                </form>
+
+        
         </form>
         <br>
         <?php if($error):  ?>
@@ -206,10 +224,10 @@ if(isset($_REQUEST['id']) && isset($_REQUEST['op'])){
                 <?php foreach($resultados as $registro): ?>
                     <tr>
                         <td><?php echo $registro['nombre']; ?></td>
-                        <td><?php echo $registro['tipoGasto']; ?></td>
-                        <td><?php echo $registro['valorGasto']; ?></td>
-                        <td><a class="btn btn-primary" href="index.php?id=<?php echo $registro['id_persona'] ?>&op=m">Modificar</a></td>
-                        <td><a class="btn btn-danger" href="index.php?id=<?php echo $registro['id_persona'] ?>&op=e" onclick="return confirm('Desea eliminar el registro');">Eliminar</a></td>
+                        <td><?php echo $registro['tipoGastos']; ?></td>
+                        <td><?php echo $registro['valorGastos']; ?></td>
+                        <td><a class="btn btn-primary" href="index.php?id=<?php echo $registro['codigoGastos'] ?>&op=m">Modificar</a></td>
+                        <td><a class="btn btn-danger" href="index.php?id=<?php echo $registro['codigoGastos'] ?>&op=e" onclick="return confirm('Desea eliminar el registro');">Eliminar</a></td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>
