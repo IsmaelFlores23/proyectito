@@ -213,7 +213,7 @@ if(isset($_REQUEST['id']) && isset($_REQUEST['op'])){
     }
     ?>
 
-    <table class="table table-bordered table-hover">
+    <table class="table table-dark table-striped">
         <thead>
         <th>Nombre</th>
         <th>Tipo de Gasto</th>
